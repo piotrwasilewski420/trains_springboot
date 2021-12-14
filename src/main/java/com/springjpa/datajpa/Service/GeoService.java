@@ -6,9 +6,6 @@ import com.springjpa.datajpa.Repository.GeoRepository;
 import com.springjpa.datajpa.Service.dto.ApiResponseDTO;
 import com.springjpa.datajpa.Service.dto.StationDTO;
 import lombok.Data;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -27,22 +24,20 @@ public class GeoService {
     private List<Geo> geoList = new ArrayList<>();
     private Double longitude;
     private Double latitude;
-    private JSONObject jsonObject;
-    private JSONArray jsonArray;
     private String name;
     private String geoDTO;
+    private ApiResponseDTO response;
     @Autowired
     private WebClient webClient;
-
-    public List<Geo> downloadAllGeos() throws JSONException {
+    public List<Geo> downloadAllGeos(){
         Iterable<Station> stations = stationScrapperService.getAllStations();
         stations.forEach(station -> {
             try {
                 name = station.getName();
                 System.out.println(name);
-                ApiResponseDTO response = webClient.get()
+                response = webClient.get()
                         .uri(uriBuilder -> uriBuilder
-                                .queryParam("query", "Warszawa")
+                                .queryParam("query", name)
                                 .build())
                         .retrieve()
                         .bodyToMono(ApiResponseDTO.class)
@@ -55,35 +50,15 @@ public class GeoService {
             } catch (RuntimeException e) {
                 System.out.println("Error while fetching geo data for station " + name + ": " + e.getMessage());
             }
-
-//            try {
-//                jsonObject = new JSONObject(geoDTO);
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                jsonArray = jsonObject.getJSONArray("data");
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                jsonObject = jsonArray.getJSONObject(0);
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                latitude = jsonObject.getDouble("latitude");
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                longitude = jsonObject.getDouble("longitude");
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//            geoList.add(new Geo(longitude, latitude));
         });
         return geoList;
+    }
+
+    private StationDTO getSingleStationFromData(ApiResponseDTO response) {
+        if (!CollectionUtils.isEmpty(response.getData()) && response.getData().size() == 1) {
+            return response.getData().get(0);
+        }
+        throw new RuntimeException("Response is empty");
     }
 
     private Geo createGeoFromResponse(ApiResponseDTO response) {
@@ -94,14 +69,7 @@ public class GeoService {
         return newGeo;
     }
 
-    private StationDTO getSingleStationFromData(ApiResponseDTO response) {
-        if (!CollectionUtils.isEmpty(response.getData()) && response.getData().size() == 1) {
-            return response.getData().get(0);
-        }
-        throw new RuntimeException("Response is empty");
-    }
-
-    public Iterable<Geo> addGeos() throws JSONException {
+    public Iterable<Geo> addGeos() {
         return geoRepository.saveAll(downloadAllGeos());
     }
 }

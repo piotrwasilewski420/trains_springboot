@@ -13,6 +13,11 @@ import javax.persistence.*;
 @Table
 public class Geo {
     @Id
+    @SequenceGenerator(
+            name = "course_sequence",
+            sequenceName = "course_sequence",
+            allocationSize = 1
+    )
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
     @Column(name = "longitude")
