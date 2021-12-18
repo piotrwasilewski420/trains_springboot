@@ -25,7 +25,10 @@ public class Station {
     private Integer id;
     @Column(name = "Name",
     nullable = true)
-    String name;
+    private String name;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "geo_id", referencedColumnName = "id")
+    private Geo geo;
 
     public Station(String name) {
         this.name=name;

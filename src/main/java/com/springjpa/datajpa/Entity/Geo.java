@@ -24,6 +24,8 @@ public class Geo {
     private Double longitude;
     @Column(name = "latitude")
     private Double latitude;
+    @OneToOne(mappedBy = "geo")
+    private Station station;
     public Geo(Double longitude,Double latitude){
         this.latitude=latitude;
         this.longitude=longitude;
