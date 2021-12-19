@@ -4,7 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.*;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
 @Data
 @NoArgsConstructor
@@ -12,6 +20,9 @@ import javax.persistence.*;
 @Entity
 @Table(name = "STATIONS")
 public class Station {
+    @Column(name = "Name",
+            nullable = true)
+    String name;
     @Id
     @SequenceGenerator(
             name = "course_sequence",
@@ -23,12 +34,12 @@ public class Station {
             generator = "course_sequence"
     )
     private Integer id;
-    @Column(name = "Name",
-    nullable = true)
-    String name;
+
+    @OneToOne(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
+    private Geo geo;
 
     public Station(String name) {
-        this.name=name;
+        this.name = name;
     }
 
 
