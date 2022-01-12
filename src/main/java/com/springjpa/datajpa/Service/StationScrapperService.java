@@ -1,5 +1,6 @@
 package com.springjpa.datajpa.Service;
 
+import com.springjpa.datajpa.Entity.Geo;
 import com.springjpa.datajpa.Entity.Station;
 import com.springjpa.datajpa.Repository.StationRepository;
 import com.springjpa.datajpa.UrlLinks.UrlLinks;
@@ -13,8 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Data
@@ -27,9 +28,11 @@ public class StationScrapperService {
     private Elements subElements;
     @Autowired
     private StationRepository stationRepository;
+    @Autowired
+    private GeoService geoService;
 
     /**
-        Get all the characters available from PortalPasazera site
+     * Get all the characters available from PortalPasazera site
      */
     public List<String> getCharsAvailable() {
         List<String> charsAvailable = new ArrayList<String>();
@@ -44,7 +47,8 @@ public class StationScrapperService {
             return new ArrayList<>();
         }
     }
-    public List<Station> getStations(List<String> charsavailable){
+
+    public List<Station> getStations(List<String> charsavailable) {
 //        Predicate<Station> stationPredicate = station -> station.getName().contains("▲");
         List<Station> stations = new ArrayList<>();
         charsavailable.forEach(character -> {
@@ -55,30 +59,45 @@ public class StationScrapperService {
             }
             Elements elements = document.getElementsByClass("pagination");
             Elements subElements = elements.first().getElementsByTag("li");
-            int lastPage = Integer.parseInt(subElements.get(subElements.size()-2).text());
-            for (int i = 1; i <= lastPage ; i++) {
+            int lastPage = Integer.parseInt(subElements.get(subElements.size() - 2).text());
+            for (int i = 1; i <= lastPage; i++) {
                 try {
-                    document = Jsoup.connect(UrlLinks.LINK_WITH_NAME_PARAM+character+"&p="+i).get();
+                    document = Jsoup.connect(UrlLinks.LINK_WITH_NAME_PARAM + character + "&p=" + i).get();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
                 elements = document.getElementsByClass("col-6 col-12--phone");
-                for(Element e : elements){
-                    stations.add(new Station(e.getElementsByTag("h3").text().replaceAll("▲","")));
+                for (Element e : elements) {
+                    stations.add(new Station(e.getElementsByTag("h3").text().replaceAll("▲", "")));
                     System.out.println(e.getElementsByTag("h3").text());
                 }
                 System.out.println(i);
             }
         });
-        return (stations.stream().distinct().collect(Collectors.toList()));
+        List<Station> distinctStations = stations.stream()
+                .distinct()
+                .limit(10)
+                .collect(Collectors.toList());
+        setGeosForEachStation(distinctStations);
+        return distinctStations;
     }
-    public Iterable<Station> populateDB(){
-      return stationRepository.saveAll(getStations(getCharsAvailable()));
+
+    private void setGeosForEachStation(List<Station> distinctStations) {
+        distinctStations.forEach(station -> {
+            Geo geos = geoService.downloadSingleGeo(station);
+            station.setGeo(geos);
+        });
     }
+
+    public Iterable<Station> populateDB() {
+        return stationRepository.saveAll(getStations(getCharsAvailable()));
+    }
+
     public Station getStationByName(String name) {
         return stationRepository.findByName(name);
     }
-    public Iterable<Station> getAllStations(){
+
+    public Collection<Station> getAllStations() {
         return stationRepository.findAll();
     }
 }

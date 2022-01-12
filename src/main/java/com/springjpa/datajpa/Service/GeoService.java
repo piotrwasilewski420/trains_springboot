@@ -12,13 +12,13 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Service
 @Data
 public class GeoService {
-    @Autowired
-    StationScrapperService stationScrapperService;
+
     @Autowired
     private GeoRepository geoRepository;
     private List<Geo> geoList = new ArrayList<>();
@@ -29,29 +29,35 @@ public class GeoService {
     private ApiResponseDTO response;
     @Autowired
     private WebClient webClient;
-    public List<Geo> downloadAllGeos(){
-        Iterable<Station> stations = stationScrapperService.getAllStations();
+    public List<Geo> downloadAllGeos(Collection<Station> stations){
+        List<Geo> geoList = new ArrayList<>();
         stations.forEach(station -> {
-            try {
-                name = station.getName();
-                System.out.println(name);
-                response = webClient.get()
-                        .uri(uriBuilder -> uriBuilder
-                                .queryParam("query", name)
-                                .build())
-                        .retrieve()
-                        .bodyToMono(ApiResponseDTO.class)
-                        .block();
-                if (response != null) {
-                    Geo newGeo = createGeoFromResponse(response);
-                    System.out.println(newGeo);
-                    geoList.add(newGeo);
-                }
-            } catch (RuntimeException e) {
-                System.out.println("Error while fetching geo data for station " + name + ": " + e.getMessage());
-            }
+            Geo geo = downloadSingleGeo(station);
+            geoList.add(geo);
         });
         return geoList;
+    }
+
+    public Geo downloadSingleGeo(Station station) {
+        try {
+            name = station.getName();
+            System.out.println(name);
+            response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .queryParam("query", name)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(ApiResponseDTO.class)
+                    .block();
+            if (response != null) {
+                Geo newGeo = createGeoFromResponse(response);
+                System.out.println(newGeo);
+                return newGeo;
+            }
+        } catch (RuntimeException e) {
+            System.out.println("Error while fetching geo data for station " + name + ": " + e.getMessage());
+        }
+        return new Geo();
     }
 
     private StationDTO getSingleStationFromData(ApiResponseDTO response) {
@@ -69,7 +75,7 @@ public class GeoService {
         return newGeo;
     }
 
-    public Iterable<Geo> addGeos() {
-        return geoRepository.saveAll(downloadAllGeos());
+    public Iterable<Geo> addGeos(Collection<Station> stations) {
+        return geoRepository.saveAll(downloadAllGeos(stations));
     }
 }
